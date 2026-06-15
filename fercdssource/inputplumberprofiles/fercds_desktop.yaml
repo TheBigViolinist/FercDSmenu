@@ -1,0 +1,164 @@
+version: 1
+kind: DeviceProfile
+name: fercds_desktop
+description: "Modo Desktop FercDS"
+target_devices:
+  - mouse
+  - keyboard
+mapping:
+  # --- RATO (Analógico Esquerdo) ---
+  - name: Joystick Mouse
+    source_event:
+      gamepad:
+        axis:
+          name: LeftStick
+    target_events:
+      - mouse:
+          motion:
+            speed_pps: 575
+
+  # --- SCROLL NATIVO CONTÍNUO (FINALMENTE)
+# --- SCROLL NATIVO CONTÍNUO E DIAGONAL (Trackpad Mode) ---
+  - name: scroll_completo
+    source_event:
+      gamepad:
+        axis:
+          name: RightStick
+    target_events:
+      - mouse:
+          wheel:
+            direction: vertical
+            wheelspeed: 0.25
+
+  # --- CLIQUES DO RATO E TECLAS ---
+  - name: clique_esquerdo
+    source_event:
+      gamepad:
+        button: South
+    target_events:
+      - mouse:
+          button: Left
+
+  - name: clique_direito
+    source_event:
+      gamepad:
+        button: North
+    target_events:
+      - mouse:
+          button: Right
+
+  - name: tecla_enter
+    source_event:
+      gamepad:
+        button: West
+    target_events:
+      - keyboard: KeyEnter
+
+  - name: tecla_esc
+    source_event:
+      gamepad:
+        button: East
+    target_events:
+      - keyboard: KeyEsc
+
+  # --- MACROS E ATALHOS ---
+  - name: select_macro
+    source_event:
+      gamepad:
+        button: Select
+    target_events:
+      - keyboard: KeyLeftMeta
+      - keyboard: KeyQ
+
+  - name: start_macro
+    source_event:
+      gamepad:
+        button: Start
+    target_events:
+      - keyboard: KeyLeftMeta
+      - keyboard: KeyEnter
+
+  - name: shoulder_l
+    source_event:
+      gamepad:
+        button: LeftBumper
+    target_events:
+      - keyboard: KeyF24
+
+  - name: shoulder_r
+    source_event:
+      gamepad:
+        button: RightBumper
+    target_events:
+      - keyboard: KeyF19
+
+  - name: gatilho_metade
+    source_event:
+      gamepad:
+        trigger:
+          name: LeftTrigger
+          deadzone: 0.5
+    target_events:
+      - keyboard: KeyLeftMeta
+
+  # --- BOTÕES ESPECIAIS (Com Técnica de Duplo Input onde necessário) ---
+  - name: guide_double_action
+    source_event:
+      gamepad:
+        button: Guide
+    target_events:
+      - keyboard: KeyLeftMeta
+      - keyboard: KeyG
+
+  - name: botao_ayasec
+    source_event:
+      gamepad:
+        button: RightPaddle2
+    target_events:
+      - gamepad:
+          button: RightPaddle1
+      - keyboard: KeyLeftMeta
+      - keyboard: KeyD
+
+  - name: botao_aya
+    source_event:
+      gamepad:
+        button: QuickAccess
+    target_events:
+      - keyboard: KeyF23
+
+  - name: botao_tela
+    source_event:
+      gamepad:
+        button: LeftPaddle2
+    target_events:
+      - keyboard: KeyLeftMeta
+      - keyboard: KeyM
+# --- D-PAD PARA SETAS ---
+  - name: seta_cima
+    source_event:
+      gamepad:
+        button: DPadUp
+    target_events:
+      - keyboard: KeyUp
+
+  - name: seta_baixo
+    source_event:
+      gamepad:
+        button: DPadDown
+    target_events:
+      - keyboard: KeyDown
+
+  - name: seta_esquerda
+    source_event:
+      gamepad:
+        button: DPadLeft
+    target_events:
+      - keyboard: KeyLeft
+
+  - name: seta_direita
+    source_event:
+      gamepad:
+        button: DPadRight
+    target_events:
+      - keyboard: KeyRight

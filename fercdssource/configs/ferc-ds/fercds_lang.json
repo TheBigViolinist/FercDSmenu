@@ -1,0 +1,67 @@
+{
+  "pt": {
+    "nav_lib": "🎮 Biblioteca", "nav_pwr": "⚡ Energia", "nav_med": "🎵 Mídia", "nav_sen": "📊 Sensores", "nav_sys": "🖥️ Sistema",
+    "back_panel": "⬅️ Voltar ao Painel", "sys_procs": "⚙️ Processos do Sistema", "unknown_proc": "Processo Desconhecido",
+    "ask_launch": "Você quer iniciar esse app?", "btn_start": "✔️ INICIAR", "btn_cancel": "❌ CANCELAR", "btn_apply": "✔️ Aplicar",
+    "no_media": "🎵 Nenhuma mídia em reprodução", "vol_gen": "🔊 Volume Geral", "def_audio": "🎧 Dispositivo Padrão",
+    "t_cpu": "🌡️ Temp CPU", "t_gpu": "🌡️ Temp GPU", "bat_cons": "⚡ Consumo Bateria", "ram_mem": "🧠 Memória RAM",
+    "cpu_usage": "⚙️ Uso de CPU", "bat_lvl": "🔋 Nível Bateria", "app_foc": "🖥️ App Focado", "none": "Nenhum",
+    "prev_ws": "⬅️ Retroceder WS", "next_ws": "Avançar WS ➡️", "close_app": "🗑️ Fechar App", "move_mon": "🔄 DP-1 ↔ eDP-1",
+    "fullscreen": "🔲 Tela Cheia", "mute_mic": "🎙️ Mutar/Desmutar Mic", "open_wins": "🪟 Janelas Abertas", "hide_panel": "🔽 Mostrar Tela Inferior",
+    "back": "⬅️ Voltar", "manage": "Gerenciar", "cw_close": "🗑️ Fechar", "cw_prev": "⬅️ WS Anterior", "cw_next": "Avançar WS ➡️",
+    "cw_move": "🔄 Trocar Monitor", "cw_fs": "🔲 Tela Cheia", "lang_title": "🌐 Idioma do Sistema", "change_lang_to": "Deseja mudar a língua para",
+    "remaining": "Restantes", "to_full": "p/ Cheia", "charged": "Carregada"
+  },
+  "mineires": {
+    "nav_lib": "🎮 Meus Trem", "nav_pwr": "⚡ Força", "nav_med": "🎵 Barulho", "nav_sen": "📊 Os Medidor", "nav_sys": "🖥️ O Sistema Sô",
+    "back_panel": "⬅️ Arredar pro Painel", "sys_procs": "⚙️ Os Trem Rodando", "unknown_proc": "Trem Desconhecido",
+    "ask_launch": "Cê quer ligar esse trem?", "btn_start": "✔️ BORA", "btn_cancel": "❌ DEIXA QUIETO", "btn_apply": "✔️ Manda Bala",
+    "no_media": "🎵 Tem nada tocando não sô", "vol_gen": "🔊 Altura do Som", "def_audio": "🎧 Saída Padrão",
+    "t_cpu": "🌡️ Quentura CPU", "t_gpu": "🌡️ Quentura GPU", "bat_cons": "⚡ Bebeira da Bateria", "ram_mem": "🧠 Lembrança (RAM)",
+    "cpu_usage": "⚙️ Suor da CPU", "bat_lvl": "🔋 Tamanho da Pilha", "app_foc": "🖥️ Trem na Tela", "none": "Nenhum moss",
+    "prev_ws": "⬅️ Arredar WS", "next_ws": "Avançar WS ➡️", "close_app": "🗑️ Matar o Trem", "move_mon": "🔄 Pular de Tela",
+    "fullscreen": "🔲 Esticar Tudo", "mute_mic": "🎙️ Calar a Boca", "open_wins": "🪟 Os Trem Aberto", "hide_panel": "🔽 Esconder Saporra",
+    "back": "⬅️ Arredar", "manage": "Mexer no", "cw_close": "🗑️ Matar", "cw_prev": "⬅️ WS de Trás", "cw_next": "WS da Frente ➡️",
+    "cw_move": "🔄 Pular Tela", "cw_fs": "🔲 Esticadim", "lang_title": "🌐 Que língua cê fala sô?", "change_lang_to": "Mudar a lingua pra",
+    "remaining": "Faltam", "to_full": "p/ Encher", "charged": "Cheinha"
+  },
+  "en": {
+    "nav_lib": "🎮 Library", "nav_pwr": "⚡ Power", "nav_med": "🎵 Media", "nav_sen": "📊 Sensors", "nav_sys": "🖥️ System",
+    "back_panel": "⬅️ Back to Panel", "sys_procs": "⚙️ System Processes", "unknown_proc": "Unknown Process",
+    "ask_launch": "Do you want to launch this app?", "btn_start": "✔️ LAUNCH", "btn_cancel": "❌ CANCEL", "btn_apply": "✔️ Apply",
+    "no_media": "🎵 No media playing", "vol_gen": "🔊 Master Volume", "def_audio": "🎧 Default Device",
+    "t_cpu": "🌡️ CPU Temp", "t_gpu": "🌡️ GPU Temp", "bat_cons": "⚡ Battery Drain", "ram_mem": "🧠 RAM Memory",
+    "cpu_usage": "⚙️ CPU Usage", "bat_lvl": "🔋 Battery Level", "app_foc": "🖥️ Focused App", "none": "None",
+    "prev_ws": "⬅️ Previous WS", "next_ws": "Next WS ➡️", "close_app": "🗑️ Close App", "move_mon": "🔄 DP-1 ↔ eDP-1",
+    "fullscreen": "🔲 Fullscreen", "mute_mic": "🎙️ Mute/Unmute Mic", "open_wins": "🪟 Open Windows", "hide_panel": "🔽 Hide Panel",
+    "back": "⬅️ Back", "manage": "Manage", "cw_close": "🗑️ Close", "cw_prev": "⬅️ Prev WS", "cw_next": "Next WS ➡️",
+    "cw_move": "🔄 Move Monitor", "cw_fs": "🔲 Fullscreen", "lang_title": "🌐 System Language", "change_lang_to": "Change language to",
+    "remaining": "Remaining", "to_full": "to Full", "charged": "Charged"
+  },
+  "es": {
+    "nav_lib": "🎮 Biblioteca", "nav_pwr": "⚡ Energía", "nav_med": "🎵 Medios", "nav_sen": "📊 Sensores", "nav_sys": "🖥️ Sistema",
+    "back_panel": "⬅️ Volver al Panel", "sys_procs": "⚙️ Procesos del Sistema", "unknown_proc": "Proceso Desconocido",
+    "ask_launch": "¿Quieres abrir esta aplicación?", "btn_start": "✔️ INICIAR", "btn_cancel": "❌ CANCELAR", "btn_apply": "✔️ Aplicar",
+    "no_media": "🎵 Sin reproducción", "vol_gen": "🔊 Volumen General", "def_audio": "🎧 Dispositivo Predeterminado",
+    "t_cpu": "🌡️ Temp CPU", "t_gpu": "🌡️ Temp GPU", "bat_cons": "⚡ Consumo Batería", "ram_mem": "🧠 Memoria RAM",
+    "cpu_usage": "⚙️ Uso de CPU", "bat_lvl": "🔋 Nivel de Batería", "app_foc": "🖥️ App Enfocada", "none": "Ninguna",
+    "prev_ws": "⬅️ WS Anterior", "next_ws": "WS Siguiente ➡️", "close_app": "🗑️ Cerrar App", "move_mon": "🔄 DP-1 ↔ eDP-1",
+    "fullscreen": "🔲 Pantalla Completa", "mute_mic": "🎙️ Silenciar/Activar Mic", "open_wins": "🪟 Ventanas Abiertas", "hide_panel": "🔽 Ocultar Panel",
+    "back": "⬅️ Volver", "manage": "Gestionar", "cw_close": "🗑️ Cerrar", "cw_prev": "⬅️ WS Anterior", "cw_next": "WS Siguiente ➡️",
+    "cw_move": "🔄 Cambiar Monitor", "cw_fs": "🔲 Pantalla Completa", "lang_title": "🌐 Idioma del Sistema", "change_lang_to": "Cambiar idioma a",
+    "remaining": "Restantes", "to_full": "para Llenar", "charged": "Cargada"
+  },
+  "it": {
+    "nav_lib": "🎮 Libreria", "nav_pwr": "⚡ Energia", "nav_med": "🎵 Media", "nav_sen": "📊 Sensori", "nav_sys": "🖥️ Sistema",
+    "back_panel": "⬅️ Torna al Pannello", "sys_procs": "⚙️ Processi di Sistema", "unknown_proc": "Processo Sconosciuto",
+    "ask_launch": "Vuoi avviare questa app?", "btn_start": "✔️ AVVIA", "btn_cancel": "❌ ANNULLA", "btn_apply": "✔️ Applica",
+    "no_media": "🎵 Nessun media in riproduzione", "vol_gen": "🔊 Volume Generale", "def_audio": "🎧 Dispositivo Predefinito",
+    "t_cpu": "🌡️ Temp CPU", "t_gpu": "🌡️ Temp GPU", "bat_cons": "⚡ Consumo Batteria", "ram_mem": "🧠 Memoria RAM",
+    "cpu_usage": "⚙️ Uso CPU", "bat_lvl": "🔋 Livello Batteria", "app_foc": "🖥️ App a Fuoco", "none": "Nessuna",
+    "prev_ws": "⬅️ WS Precedente", "next_ws": "WS Successivo ➡️", "close_app": "🗑️ Chiudi App", "move_mon": "🔄 DP-1 ↔ eDP-1",
+    "fullscreen": "🔲 Schermo Intero", "mute_mic": "🎙️ Muta/Smuta Mic", "open_wins": "🪟 Finestre Aperte", "hide_panel": "🔽 Nascondi Pannello",
+    "back": "⬅️ Indietro", "manage": "Gestisci", "cw_close": "🗑️ Chiudi", "cw_prev": "⬅️ WS Prec", "cw_next": "WS Succ ➡️",
+    "cw_move": "🔄 Cambia Monitor", "cw_fs": "🔲 Schermo Intero", "lang_title": "🌐 Lingua di Sistema", "change_lang_to": "Cambia lingua in",
+    "remaining": "Rimanenti", "to_full": "alla Fine", "charged": "Carica"
+  }
+}

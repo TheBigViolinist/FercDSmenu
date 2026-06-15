@@ -1,0 +1,43 @@
+version: 1
+kind: DeviceProfile
+name: fercds_gamepad
+description: "Modo Gamepad DS5 Edge com interceção do Guide"
+target_devices:
+  - ds5-edge
+  - keyboard
+mapping:
+  # O Botão Guide faz o papel original DELE e envia Super+G em simultâneo
+  - name: guide_double_action
+    source_event:
+      gamepad:
+        button: Guide
+    target_events:
+      - gamepad:
+          button: Guide
+      - keyboard: KeyLeftMeta
+      - keyboard: KeyG
+
+  - name: botao_ayasec
+    source_event:
+      gamepad:
+        button: RightPaddle2
+    target_events:
+      - gamepad:
+          button: RightPaddle1
+      - keyboard: KeyLeftMeta
+      - keyboard: KeyD
+
+  - name: botao_aya
+    source_event:
+      gamepad:
+        button: QuickAccess
+    target_events:
+      - keyboard: KeyF23
+
+  - name: botao_tela
+    source_event:
+      gamepad:
+        button: LeftPaddle2
+    target_events:
+      - keyboard: KeyLeftMeta
+      - keyboars: KeyM
