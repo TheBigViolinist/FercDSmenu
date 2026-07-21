@@ -712,11 +712,11 @@ class FercDSMenu(Gtk.Window):
             self.apps_data.sort(key=lambda x: (-x["count"], x["name"].lower()))
             self.populate_flowbox()
             
-            cmd = f"hyprctl dispatch 'hl.dispatch(hl.dsp.focus({{ monitor = \"eDP-1\" }}))' && {app['command']} &"
+            cmd = f"hyprctl dispatch 'hl.dispatch(hl.dsp.focus({{ monitor = \"eDP-1\" }}))' ; {app['command']} &"
             subprocess.Popen(cmd, shell=True)
             
         self.page5_stack.set_visible_child_name("grid")
-
+        
     # --- PÁGINA 1: ENERGIA TDP E OS TREM BAO DEMAIS DA CONTA ---
     def setup_page_1(self):
         page = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=20)
@@ -955,8 +955,8 @@ class FercDSMenu(Gtk.Window):
         grid.attach(self.btn_hide_panel, 1, 3, 1, 1)
         page_main.pack_start(grid, True, True, 0)
         
-        self.btn_prev_ws.connect("clicked", lambda x: subprocess.Popen(['bash', '-c', "sleep 0.1 && hyprctl dispatch 'hl.dispatch(hl.dsp.focus({ monitor = \"eDP-1\" }))' && hyprctl dispatch 'hl.dispatch(hl.dsp.focus({ workspace = \"m-1\" }))'"]))
-        self.btn_next_ws.connect("clicked", lambda x: subprocess.Popen(['bash', '-c', "sleep 0.1 && hyprctl dispatch 'hl.dispatch(hl.dsp.focus({ monitor = \"eDP-1\" }))' && hyprctl dispatch 'hl.dispatch(hl.dsp.focus({ workspace = \"m+1\" }))'"]))
+        self.btn_prev_ws.connect("clicked", lambda x: subprocess.Popen(['bash', '-c', "sleep 0.1 ; hyprctl dispatch 'hl.dispatch(hl.dsp.focus({ monitor = \"eDP-1\" }))' ; hyprctl dispatch 'hl.dispatch(hl.dsp.focus({ workspace = \"m-1\" }))'"]))
+        self.btn_next_ws.connect("clicked", lambda x: subprocess.Popen(['bash', '-c', "sleep 0.1 ; hyprctl dispatch 'hl.dispatch(hl.dsp.focus({ monitor = \"eDP-1\" }))' ; hyprctl dispatch 'hl.dispatch(hl.dsp.focus({ workspace = \"m+1\" }))'"]))
         self.btn_close.connect("clicked", lambda x: subprocess.Popen(['bash', '-c', "hyprctl dispatch 'hl.dispatch(hl.dsp.window.close())'"]))
         self.btn_move.connect("clicked", self.toggle_window_monitor_exact)
         self.btn_fs.connect("clicked", lambda x: subprocess.Popen(['bash', '-c', "hyprctl dispatch 'hl.dispatch(hl.dsp.window.fullscreen())'"]))
@@ -1139,15 +1139,15 @@ class FercDSMenu(Gtk.Window):
 
     def on_cw_prev(self, btn):
         if self.active_control_window_address:
-            subprocess.Popen(f"hyprctl dispatch 'hl.dispatch(hl.dsp.focus({{ window = \"address:{self.active_control_window_address}\" }}))' && hyprctl dispatch 'hl.dispatch(hl.dsp.window.move({{ workspace = \"m-1\" }}))'", shell=True)
+            subprocess.Popen(f"hyprctl dispatch 'hl.dispatch(hl.dsp.focus({{ window = \"address:{self.active_control_window_address}\" }}))' ; hyprctl dispatch 'hl.dispatch(hl.dsp.window.move({{ workspace = \"m-1\" }}))'", shell=True)
 
     def on_cw_next(self, btn):
         if self.active_control_window_address:
-            subprocess.Popen(f"hyprctl dispatch 'hl.dispatch(hl.dsp.focus({{ window = \"address:{self.active_control_window_address}\" }}))' && hyprctl dispatch 'hl.dispatch(hl.dsp.window.move({{ workspace = \"m+1\" }}))'", shell=True)
+            subprocess.Popen(f"hyprctl dispatch 'hl.dispatch(hl.dsp.focus({{ window = \"address:{self.active_control_window_address}\" }}))' ; hyprctl dispatch 'hl.dispatch(hl.dsp.window.move({{ workspace = \"m+1\" }}))'", shell=True)
             
     def on_cw_fs(self, btn):
         if self.active_control_window_address:
-            subprocess.Popen(f"hyprctl dispatch 'hl.dispatch(hl.dsp.focus({{ window = \"address:{self.active_control_window_address}\" }}))' && hyprctl dispatch 'hl.dispatch(hl.dsp.window.fullscreen())'", shell=True)
+            subprocess.Popen(f"hyprctl dispatch 'hl.dispatch(hl.dsp.focus({{ window = \"address:{self.active_control_window_address}\" }}))' ; hyprctl dispatch 'hl.dispatch(hl.dsp.window.fullscreen())'", shell=True)
 
     def on_cw_move(self, btn):
         if not self.active_control_window_address: return
@@ -1162,7 +1162,7 @@ class FercDSMenu(Gtk.Window):
             current_name = next((m["name"] for m in monitors if m["id"] == client["monitor"]), "")
             
             target_mon = "eDP-1" if current_name == "DP-1" else "DP-1"
-            cmd = f"hyprctl dispatch 'hl.dispatch(hl.dsp.focus({{ window = \"address:{self.active_control_window_address}\" }}))' && hyprctl dispatch 'hl.dispatch(hl.dsp.window.move({{ monitor = \"{target_mon}\" }}))'"
+            cmd = f"hyprctl dispatch 'hl.dispatch(hl.dsp.focus({{ window = \"address:{self.active_control_window_address}\" }}))' ; hyprctl dispatch 'hl.dispatch(hl.dsp.window.move({{ monitor = \"{target_mon}\" }}))'"
             subprocess.Popen(cmd, shell=True)
         except Exception as e: pass
 
