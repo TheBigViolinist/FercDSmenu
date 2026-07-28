@@ -33,6 +33,7 @@ class FercDSMenu(Gtk.Window):
         self.initial_tdp = self.get_current_tdp()
         self.initial_fan = self.get_current_fan()
         self.initial_gpu = self.get_current_gpu()
+        self.initial_cpu_epp = self.get_current_cpu_epp() 
         self.initial_volume = self.get_current_volume() 
         
         self.history_len = 50
@@ -133,6 +134,18 @@ class FercDSMenu(Gtk.Window):
                 with open("/tmp/current_tdp", "r") as f: return int(f.read().strip())
             except: pass
         return 15
+
+    def get_current_cpu_epp(self):
+        if os.path.exists("/tmp/cpu_epp"):
+            try:
+                with open("/tmp/cpu_epp", "r") as f:
+                    c = f.read().strip()
+                    if c == "power": return 0
+                    elif c == "balance_power": return 1
+                    elif c == "balance_performance": return 2
+                    elif c == "performance": return 3
+            except: pass
+        return 1 
 
     def get_current_fan(self):
         if os.path.exists("/tmp/fan_mode"):
@@ -346,6 +359,11 @@ class FercDSMenu(Gtk.Window):
         self.btn_no_p5.set_label(self._t("btn_cancel"))
         
         self.lbl_tdp.set_text(f"🔥 TDP\n{int(self.sl_tdp.get_value())}W")
+        
+        cpu_val = int(self.sl_cpu_epp.get_value())
+        epp_labels = {0: "Power", 1: "Bal-Pw", 2: "Bal-Pf", 3: "Perf"}
+        self.lbl_cpu_epp.set_text(f"⚙️ CPU\n{epp_labels.get(cpu_val, 'Bal-Pw')}")
+        
         fan_val = int(self.sl_fan.get_value())
         self.lbl_fan.set_text(f"🌀 FAN\nAuto" if fan_val == 0 else f"🌀 FAN\n{fan_val}%")
         gpu_val = int(self.sl_gpu.get_value())
@@ -712,6 +730,7 @@ class FercDSMenu(Gtk.Window):
             self.apps_data.sort(key=lambda x: (-x["count"], x["name"].lower()))
             self.populate_flowbox()
             
+            # ATUALIZADO: Usando ';' para encadear a ação no Hyprland 0.56.0
             cmd = f"hyprctl dispatch 'hl.dispatch(hl.dsp.focus({{ monitor = \"eDP-1\" }}))' ; {app['command']} &"
             subprocess.Popen(cmd, shell=True)
             
@@ -745,7 +764,9 @@ class FercDSMenu(Gtk.Window):
         grid.attach(bat_frame, 0, 0, 1, 1)
 
         right_panel = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=20)
-        sliders_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=30)
+        
+        # ATUALIZADO: Espaçamento reduzido de 30 para 5 para acomodar a nova barra
+        sliders_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=5)
         sliders_box.set_halign(Gtk.Align.CENTER)
         sliders_box.set_vexpand(True)
         sliders_box.set_homogeneous(True) 
@@ -754,7 +775,11 @@ class FercDSMenu(Gtk.Window):
             box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
             lbl = Gtk.Label()
             lbl.set_justify(Gtk.Justification.CENTER)
+            lbl.set_halign(Gtk.Align.CENTER)
             lbl.set_name("sliderText")
+            
+            # ATUALIZADO: Tamanho de etiqueta travado em 65 pixels para evitar "dança"
+            lbl.set_size_request(65, -1)
             
             adj = Gtk.Adjustment(value=curr_val, lower=min_v, upper=max_v, step_increment=step, page_increment=step)
             scale = Gtk.Scale(orientation=Gtk.Orientation.VERTICAL, adjustment=adj)
@@ -776,10 +801,12 @@ class FercDSMenu(Gtk.Window):
             return box, scale, lbl
 
         self.box_tdp, self.sl_tdp, self.lbl_tdp = create_slider("🔥 TDP", 5, 30, 1, self.initial_tdp, self.on_tdp_change)
+        self.box_cpu, self.sl_cpu_epp, self.lbl_cpu_epp = create_slider("⚙️ CPU", 0, 3, 1, self.initial_cpu_epp, self.on_cpu_epp_change)
         self.box_fan, self.sl_fan, self.lbl_fan = create_slider("🌀 FAN", 0, 100, 1, self.initial_fan, self.on_fan_change)
         self.box_gpu, self.sl_gpu, self.lbl_gpu = create_slider("🎮 GPU", 0, 2900, 100, self.initial_gpu, self.on_gpu_change)
 
         sliders_box.pack_start(self.box_tdp, True, True, 0)
+        sliders_box.pack_start(self.box_cpu, True, True, 0)
         sliders_box.pack_start(self.box_fan, True, True, 0)
         sliders_box.pack_start(self.box_gpu, True, True, 0)
         right_panel.pack_start(sliders_box, True, True, 0)
@@ -955,6 +982,7 @@ class FercDSMenu(Gtk.Window):
         grid.attach(self.btn_hide_panel, 1, 3, 1, 1)
         page_main.pack_start(grid, True, True, 0)
         
+        # ATUALIZADO: Usando ';' para encadear a ação no Hyprland 0.56.0
         self.btn_prev_ws.connect("clicked", lambda x: subprocess.Popen(['bash', '-c', "sleep 0.1 ; hyprctl dispatch 'hl.dispatch(hl.dsp.focus({ monitor = \"eDP-1\" }))' ; hyprctl dispatch 'hl.dispatch(hl.dsp.focus({ workspace = \"m-1\" }))'"]))
         self.btn_next_ws.connect("clicked", lambda x: subprocess.Popen(['bash', '-c', "sleep 0.1 ; hyprctl dispatch 'hl.dispatch(hl.dsp.focus({ monitor = \"eDP-1\" }))' ; hyprctl dispatch 'hl.dispatch(hl.dsp.focus({ workspace = \"m+1\" }))'"]))
         self.btn_close.connect("clicked", lambda x: subprocess.Popen(['bash', '-c', "hyprctl dispatch 'hl.dispatch(hl.dsp.window.close())'"]))
@@ -1041,10 +1069,15 @@ class FercDSMenu(Gtk.Window):
 
         self.stack.add_named(self.page4_stack, "page4")
 
-    # --- LÓGICA DOS SLIDERS (GPU/TDP/FAN) ---
+    # --- LÓGICA DOS SLIDERS (GPU/TDP/FAN/CPU) ---
     def on_tdp_change(self, scale, lbl, title_key):
         val = int(scale.get_value())
         lbl.set_text(f"🔥 TDP\n{val}W")
+        
+    def on_cpu_epp_change(self, scale, lbl, title_key):
+        val = int(scale.get_value())
+        epp_labels = {0: "Power", 1: "Bal-Pw", 2: "Bal-Pf", 3: "Perf"}
+        lbl.set_text(f"⚙️ CPU\n{epp_labels.get(val, 'Bal-Pw')}")
 
     def on_fan_change(self, scale, lbl, title_key):
         val = int(scale.get_value())
@@ -1061,11 +1094,15 @@ class FercDSMenu(Gtk.Window):
         tdp = int(self.sl_tdp.get_value())
         fan = int(self.sl_fan.get_value())
         gpu = int(self.sl_gpu.get_value())
+        cpu_val = int(self.sl_cpu_epp.get_value())
         mw = tdp * 1000
         
         gpu_cmd = f"echo {'auto' if gpu == 0 else gpu} > /tmp/gpu_clock; "
         
-        bash_cmd = f"sudo ryzenadj --stapm-limit={mw} --fast-limit={mw} --slow-limit={mw}; echo {tdp} > /tmp/current_tdp; " + gpu_cmd
+        epp_modes = {0: "power", 1: "balance_power", 2: "balance_performance", 3: "performance"}
+        cpu_cmd = f"echo {epp_modes.get(cpu_val, 'balance_power')} > /tmp/cpu_epp; "
+        
+        bash_cmd = f"sudo ryzenadj --stapm-limit={mw} --fast-limit={mw} --slow-limit={mw}; echo {tdp} > /tmp/current_tdp; " + gpu_cmd + cpu_cmd
         
         if fan == 0:
             bash_cmd += "echo 'auto' > /tmp/fan_mode; "
@@ -1139,14 +1176,17 @@ class FercDSMenu(Gtk.Window):
 
     def on_cw_prev(self, btn):
         if self.active_control_window_address:
+            # ATUALIZADO: Usando ';' para encadear a ação no Hyprland 0.56.0
             subprocess.Popen(f"hyprctl dispatch 'hl.dispatch(hl.dsp.focus({{ window = \"address:{self.active_control_window_address}\" }}))' ; hyprctl dispatch 'hl.dispatch(hl.dsp.window.move({{ workspace = \"m-1\" }}))'", shell=True)
 
     def on_cw_next(self, btn):
         if self.active_control_window_address:
+            # ATUALIZADO: Usando ';' para encadear a ação no Hyprland 0.56.0
             subprocess.Popen(f"hyprctl dispatch 'hl.dispatch(hl.dsp.focus({{ window = \"address:{self.active_control_window_address}\" }}))' ; hyprctl dispatch 'hl.dispatch(hl.dsp.window.move({{ workspace = \"m+1\" }}))'", shell=True)
             
     def on_cw_fs(self, btn):
         if self.active_control_window_address:
+            # ATUALIZADO: Usando ';' para encadear a ação no Hyprland 0.56.0
             subprocess.Popen(f"hyprctl dispatch 'hl.dispatch(hl.dsp.focus({{ window = \"address:{self.active_control_window_address}\" }}))' ; hyprctl dispatch 'hl.dispatch(hl.dsp.window.fullscreen())'", shell=True)
 
     def on_cw_move(self, btn):
@@ -1162,6 +1202,7 @@ class FercDSMenu(Gtk.Window):
             current_name = next((m["name"] for m in monitors if m["id"] == client["monitor"]), "")
             
             target_mon = "eDP-1" if current_name == "DP-1" else "DP-1"
+            # ATUALIZADO: Usando ';' para encadear a ação no Hyprland 0.56.0
             cmd = f"hyprctl dispatch 'hl.dispatch(hl.dsp.focus({{ window = \"address:{self.active_control_window_address}\" }}))' ; hyprctl dispatch 'hl.dispatch(hl.dsp.window.move({{ monitor = \"{target_mon}\" }}))'"
             subprocess.Popen(cmd, shell=True)
         except Exception as e: pass
