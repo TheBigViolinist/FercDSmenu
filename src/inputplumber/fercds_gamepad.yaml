@@ -40,4 +40,4 @@ mapping:
         button: LeftPaddle2
     target_events:
       - keyboard: KeyLeftMeta
-      - keyboars: KeyM
+      - keyboard: KeyM

@@ -1,0 +1,99 @@
+#!/bin/bash
+# fercds-gyro - liga/desliga o giroscópio (IMU BMI323) do AYANEO FLIP 1S DS.
+#
+# Desligar tira o sensor do driver (unbind): o dispositivo IIO some do sistema
+# e o InputPlumber para de ler o sensor em loop, o que economiza bateria.
+# Ligar devolve o sensor ao driver (bind) e o próprio InputPlumber percebe a
+# IMU voltando e a devolve ao controle virtual. O serviço não é reiniciado de
+# propósito: reiniciar faria ele esquecer o perfil (desktop/gamepad) carregado.
+#
+# uso: fercds-gyro status|on|off|toggle
+#   status   imprime "on" ou "off" (qualquer usuário pode rodar)
+#   on, off  precisam de root; o install.sh do FercDS libera via sudo sem senha
+#   toggle   inverte o estado atual
+
+# Este script roda como root pelo sudo sem senha, e o sudo do Arch mantém o PATH
+# do usuário: shebang absoluto e PATH fixo impedem que um "bash" ou "modprobe"
+# largado numa pasta do usuário acabe executado como root.
+PATH=/usr/bin:/usr/sbin:/bin:/sbin
+export PATH
+set -uo pipefail
+
+DEV=i2c-BOSC0200:00
+DEV_PATH=/sys/bus/i2c/devices/$DEV
+DRIVERS=/sys/bus/i2c/drivers
+# O bmc150_accel_i2c também casa com BOSC0200, mas recusa o chip no boot
+# ("Invalid chip 0"); quem de fato atende o sensor é o bmi323.
+DRIVER_PADRAO=bmi323
+MODULO_PADRAO=bmi323_i2c
+# Com o sensor desligado o link "driver" some, então o driver que estava em uso
+# fica guardado aqui para o "on" saber onde religar.
+ESTADO=/var/lib/fercds/gyro.driver
+
+erro() { echo "fercds-gyro: $*" >&2; exit 1; }
+
+ligado() { [ -L "$DEV_PATH/driver" ]; }
+
+exige_sensor() { [ -e "$DEV_PATH" ] || erro "o sensor $DEV não existe neste aparelho"; }
+
+exige_root() { [ "$(id -u)" -eq 0 ] || erro "precisa de root (rode com sudo)"; }
+
+# Driver guardado no último "off", se ainda for um driver carregado; senão o
+# padrão (é o caso de quando o sensor foi desligado na mão, sem este script).
+driver_para_ligar() {
+    local drv=""
+    [ -r "$ESTADO" ] && read -r drv < "$ESTADO"
+    if [[ ! $drv =~ ^[A-Za-z0-9_-]+$ ]] || [ ! -d "$DRIVERS/$drv" ]; then
+        drv=$DRIVER_PADRAO
+    fi
+    echo "$drv"
+}
+
+ligar() {
+    exige_root
+    exige_sensor
+    if ligado; then
+        echo "gyro já está ligado"
+        return 0
+    fi
+
+    local drv
+    drv=$(driver_para_ligar)
+    # Com o módulo descarregado, carregar já faz o kernel ligar o sensor
+    # sozinho; o bind só é escrito se ainda faltar.
+    [ -d "$DRIVERS/$drv" ] || modprobe "$MODULO_PADRAO" || erro "não consegui carregar o módulo $MODULO_PADRAO"
+    ligado || echo "$DEV" > "$DRIVERS/$drv/bind" || erro "o kernel recusou o bind no driver $drv"
+    ligado || erro "o bind no driver $drv não pegou"
+    rm -f "$ESTADO"
+    echo "gyro ligado"
+}
+
+desligar() {
+    exige_root
+    exige_sensor
+    if ! ligado; then
+        echo "gyro já está desligado"
+        return 0
+    fi
+
+    local drv
+    drv=$(basename "$(readlink -f "$DEV_PATH/driver")")
+    { mkdir -p "${ESTADO%/*}" && echo "$drv" > "$ESTADO"; } || erro "não consegui gravar $ESTADO"
+    echo "$DEV" > "$DEV_PATH/driver/unbind" || erro "o kernel recusou o unbind"
+    ligado && erro "o unbind não pegou"
+    echo "gyro desligado"
+}
+
+case "${1:-}" in
+    status)
+        exige_sensor
+        if ligado; then echo on; else echo off; fi
+        ;;
+    on)     ligar ;;
+    off)    desligar ;;
+    toggle) if ligado; then desligar; else ligar; fi ;;
+    *)
+        echo "uso: fercds-gyro status|on|off|toggle" >&2
+        exit 2
+        ;;
+esac

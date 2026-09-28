@@ -9,6 +9,9 @@ if [ -f "$FAN_DIR/pwm1_enable" ]; then echo 1 > "$FAN_DIR/pwm1_enable"; fi
 while true; do
     # Lê a ordem do painel (se não houver ordem, assume 'auto')
     MODE=$(cat /tmp/fan_mode 2>/dev/null || echo "auto")
+    # Este loop roda como root e o /tmp aceita escrita de qualquer usuário: só
+    # uma porcentagem de 0 a 100 entra na conta do PWM, o resto vale "auto".
+    if [[ ! $MODE =~ ^[0-9]{1,3}$ ]] || [ "$((10#$MODE))" -gt 100 ]; then MODE="auto"; fi
 
     if [ "$MODE" = "auto" ]; then
         # Modo Automático (Curva Térmica)
@@ -22,7 +25,7 @@ while true; do
         else PWM=0; fi
     else
         # Modo Manual Fixo (Converte a porcentagem 1-100 para PWM 0-255)
-        PWM=$((MODE * 255 / 100))
+        PWM=$((10#$MODE * 255 / 100))
     fi
 
     echo $PWM > "$FAN_DIR/pwm1" 2>/dev/null

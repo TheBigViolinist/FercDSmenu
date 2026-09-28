@@ -82,6 +82,118 @@ ICON_FALLBACK_DIRS = [
 # para esta tela antes de lancar o menu.
 TARGET_MONITOR = "DP-1"
 
+# --- CONFIGURACOES ---
+# Subpaginas das configuracoes e a pagina que abre cada uma: o "voltar" sobe um
+# nivel por vez ate o menu e, do menu, sai para o painel.
+SETTINGS_PARENT = {
+    "library": "menu",
+    "control": "menu",
+    "sound": "menu",
+    "default_cat": "library",
+    "hidden": "library",
+}
+
+# Liga/desliga o gyro (fercds-gyro, instalado pelo install.sh do FercDS, que
+# fica em src/backend no repo). "status" roda como usuario comum; on/off precisam
+# de root e passam pelo sudo sem senha que o instalador libera so para esse script.
+GYRO_SCRIPT = "/usr/local/bin/fercds-gyro"
+
+# Ordem das paginas na dock, que e tambem a ordem em que o self.stack desliza:
+# decide se a troca de pagina toca o som "para a esquerda" ou "para a direita".
+NAV_PAGES = ["page5", "page1", "page2", "page3", "page4"]
+
+# --- SONS ---
+# Os arquivos vem do tema de sons do sistema (gsettings org.gnome.desktop.sound
+# theme-name, que o GTK repassa em gtk-sound-theme-name e que a DMS troca nas
+# configuracoes dela). A busca e a mesma da DMS: todos os nomes no tema escolhido
+# (e nos que ele herda) e so depois no "freedesktop", a reserva da spec.
+SOUND_EXTENSIONS = (".oga", ".ogg", ".wav", ".mp3", ".flac")
+
+# Evento do painel -> (categoria, nomes da spec de sons do freedesktop em ordem de
+# preferencia). "essential" sao os sons que o painel ja tinha; "ambient" os de
+# navegacao e ajustes. Cada categoria tem um switch em Configuracoes > Som.
+SOUND_CATEGORIES = ("essential", "ambient")
+SOUND_EVENTS = {
+    "click":      ("essential", ["button-pressed", "menu-click", "dialog-information"]),
+    "select":     ("essential", ["item-selected", "dialog-ok", "dialog-information"]),
+    "cancel":     ("essential", ["dialog-cancel", "window-close", "dialog-warning"]),
+    "complete":   ("essential", ["complete", "complete-copy", "dialog-information"]),
+    # Trocar de pagina na dock, trocar de workspace e mandar a janela para outro
+    # workspace: tudo com o mesmo som de troca de workspace do sistema.
+    "switch_left":  ("ambient", ["desktop-switch-left", "notebook-tab-changed"]),
+    "switch_right": ("ambient", ["desktop-switch-right", "notebook-tab-changed"]),
+    "category":   ("ambient", ["notebook-tab-changed", "desktop-switch-right"]),
+    "enter":      ("ambient", ["menu-popup", "dialog-question"]),
+    "back":       ("ambient", ["menu-popdown", "dialog-cancel", "window-close"]),
+    # Mesmo som que a DMS toca ao mexer no volume: todo slider soa igual.
+    "slider":     ("ambient", ["audio-volume-change", "button-pressed"]),
+    "toggle_on":  ("ambient", ["button-toggle-on", "button-pressed"]),
+    "toggle_off": ("ambient", ["button-toggle-off", "button-pressed"]),
+    "apply":      ("ambient", ["dialog-ok", "complete"]),
+    "launch":     ("ambient", ["window-new", "service-login"]),
+    # Pagina Sistema. A spec nao tem nome proprio para tela cheia: os temas (o
+    # nintendold inclusive) poem os sons de entrar e sair em maximized/unmaximized.
+    "fullscreen_on":  ("ambient", ["window-maximized", "button-toggle-on"]),
+    "fullscreen_off": ("ambient", ["window-unmaximized", "button-toggle-off"]),
+    "window_close":   ("ambient", ["window-close", "dialog-cancel"]),
+    "window_monitor": ("ambient", ["window-move-end", "window-switch", "desktop-switch-right"]),
+    "hide_panel":     ("ambient", ["window-minimized", "menu-popdown", "dialog-cancel"]),
+}
+# Intervalo minimo entre duas repeticoes do mesmo evento: arrastar um slider muda
+# o valor dezenas de vezes por segundo, e sem isso os sons virariam um zumbido.
+SOUND_MIN_GAP_MS = {"slider": 120}
+SOUND_DEFAULT_GAP_MS = 60
+
+def sound_theme_dirs(theme):
+    """Pastas em que o tema de sons `theme` pode estar, da mais para a menos
+    prioritaria (a do usuario antes das do sistema, como manda o XDG)."""
+    data_home = os.environ.get("XDG_DATA_HOME") or os.path.expanduser("~/.local/share")
+    data_dirs = os.environ.get("XDG_DATA_DIRS") or "/usr/local/share:/usr/share"
+    return [os.path.join(d, "sounds", theme) for d in [data_home] + data_dirs.split(":") if d]
+
+def sound_theme_info(theme):
+    """(nome de exibicao, temas herdados), lidos do index.theme do tema."""
+    for folder in sound_theme_dirs(theme):
+        index = GLib.KeyFile()
+        try:
+            index.load_from_file(os.path.join(folder, "index.theme"), GLib.KeyFileFlags.NONE)
+        except GLib.Error:
+            continue
+        try:
+            title = index.get_locale_string("Sound Theme", "Name", None)
+        except GLib.Error:
+            title = theme
+        try:
+            inherits = index.get_string("Sound Theme", "Inherits").split(",")
+        except GLib.Error:
+            inherits = []
+        return title, [t.strip() for t in inherits if t.strip()]
+    return theme, []
+
+def sound_theme_chain(theme):
+    """Tema escolhido + os que ele herda, com o freedesktop sempre por ultimo."""
+    chain, pending = [], [theme]
+    while pending:
+        name = pending.pop(0)
+        if name and name != "freedesktop" and name not in chain:
+            chain.append(name)
+            pending += sound_theme_info(name)[1]
+    return chain + ["freedesktop"]
+
+def find_theme_sound(chain, names):
+    """Arquivo do primeiro de `names` que existir, tema a tema. Cada tema e
+    esgotado antes do seguinte: um som do tema escolhido ganha de um nome mais
+    exato que so exista no freedesktop."""
+    for theme in chain:
+        folders = sound_theme_dirs(theme)
+        for name in names:
+            for folder in folders:
+                for ext in SOUND_EXTENSIONS:
+                    path = os.path.join(folder, "stereo", name + ext)
+                    if os.path.isfile(path):
+                        return path
+    return None
+
 def find_gdk_monitor(connector_name):
     """Devolve o GdkMonitor do conector (ex.: "DP-1"), ou None se ele nao existir.
 
@@ -183,6 +295,15 @@ class FercDSMenu(Gtk.Window):
         self.default_category = self.get_default_category()
         self.current_category = self.default_category
 
+        # --- SONS ---
+        # Os switches de Configurações > Som e o cache {evento: arquivo} do tema de
+        # sons do sistema, que é refeito sozinho se o tema mudar com o painel aberto.
+        self.sound_enabled = self.load_sound_settings()
+        self._sound_theme = None
+        self._sound_chain = []
+        self._sound_paths = {}
+        self._sound_last_ms = {}
+
         # Icones ja resolvidos: {(valor do Icon=, tamanho em px): cairo surface}.
         # O DP-1 roda em scale=2, entao o arquivo e lido no dobro do tamanho.
         self._icon_cache = {}
@@ -196,6 +317,12 @@ class FercDSMenu(Gtk.Window):
         
         self.active_control_window_address = None
         self.proc_timer_id = None
+
+        # Gyro (subpágina Controle): último estado lido do fercds-gyro (None =
+        # script ausente), o sudo em andamento e o erro da última troca.
+        self.gyro_state = None
+        self.gyro_proc = None
+        self.gyro_error = None
 
         self.apply_css()
         self.setup_ui()
@@ -282,6 +409,67 @@ class FercDSMenu(Gtk.Window):
         self.apps_data.sort(key=lambda a: (not a.get("pinned"),
                                            -a.get("count", 0),
                                            a.get("name", "").lower()))
+
+    # --- SONS ---
+    def load_sound_settings(self):
+        """{categoria: ligada?}. Tudo ligado até alguém mexer nos switches."""
+        enabled = {c: True for c in SOUND_CATEGORIES}
+        try:
+            if os.path.exists(self.state_file):
+                with open(self.state_file, 'r') as f:
+                    saved = json.load(f).get("sounds", {})
+                for c in SOUND_CATEGORIES:
+                    if isinstance(saved.get(c), bool):
+                        enabled[c] = saved[c]
+        except: pass
+        return enabled
+
+    def save_sound_settings(self):
+        try:
+            data = {}
+            if os.path.exists(self.state_file):
+                with open(self.state_file, 'r') as f:
+                    data = json.load(f)
+            data["sounds"] = self.sound_enabled
+            os.makedirs(os.path.dirname(self.state_file), exist_ok=True)
+            with open(self.state_file, 'w') as f:
+                json.dump(data, f)
+        except: pass
+
+    def current_sound_theme(self):
+        # No Wayland o GTK lê isso do gsettings (org.gnome.desktop.sound), o mesmo
+        # lugar em que a DMS grava o tema escolhido.
+        try:
+            return Gtk.Settings.get_default().props.gtk_sound_theme_name or "freedesktop"
+        except Exception:
+            return "freedesktop"
+
+    def sound_path(self, event):
+        theme = self.current_sound_theme()
+        if theme != self._sound_theme:
+            self._sound_theme = theme
+            self._sound_chain = sound_theme_chain(theme)
+            self._sound_paths = {}
+        if event not in self._sound_paths:
+            self._sound_paths[event] = find_theme_sound(self._sound_chain, SOUND_EVENTS[event][1])
+        return self._sound_paths[event]
+
+    def play_sound(self, event):
+        category = SOUND_EVENTS[event][0]
+        if not self.sound_enabled.get(category, True):
+            return
+        now = GLib.get_monotonic_time() // 1000
+        last = self._sound_last_ms.get(event)
+        if last is not None and now - last < SOUND_MIN_GAP_MS.get(event, SOUND_DEFAULT_GAP_MS):
+            return
+        self._sound_last_ms[event] = now
+        path = self.sound_path(event)
+        if path:
+            # Sem paplay o painel só fica mudo: navegação não pode quebrar por causa de som.
+            try:
+                subprocess.Popen(["paplay", path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            except OSError:
+                pass
 
     # --- ICONES DOS APPS ---
     def icon_scale_factor(self, monitor):
@@ -428,6 +616,14 @@ class FercDSMenu(Gtk.Window):
         except: pass
 
     def change_main_page(self, widget, page_name):
+        current = self.stack.get_visible_child_name()
+        if current in NAV_PAGES and page_name != current:
+            forward = NAV_PAGES.index(page_name) > NAV_PAGES.index(current)
+            self.play_sound("switch_right" if forward else "switch_left")
+        elif page_name == current and self.page_has_subpage_open(page_name):
+            # Tocar na página em que já se está só fecha a subpágina aberta nela.
+            self.play_sound("back")
+
         self.stack.set_visible_child_name(page_name)
         self.set_last_page(page_name)
         
@@ -442,6 +638,13 @@ class FercDSMenu(Gtk.Window):
         if hasattr(self, 'page4_stack'):
             self.page4_stack.set_visible_child_name("main")
             self.active_control_window_address = None
+
+    def page_has_subpage_open(self, page_name):
+        if page_name == "page5":
+            return self.page5_stack.get_visible_child_name() != "grid"
+        if page_name == "page4":
+            return self.page4_stack.get_visible_child_name() != "main"
+        return False
 
     # --- LEITURA DE HARDWARE ---
     def get_current_tdp(self):
@@ -762,9 +965,12 @@ class FercDSMenu(Gtk.Window):
         self.lbl_hidden_hint.set_text(self._t("hidden_hint"))
         self.lbl_no_hidden.set_text(self._t("no_hidden_apps"))
         self.lbl_custom_hint.set_text("%s\n%s/" % (self._t("customapps_hint"), self.custom_apps_dir))
+        self.lbl_gyro_title.set_text(self._t("gyro_title"))
+        self.refresh_sound_page()
         self.refresh_settings_buttons()
         self.refresh_settings_header()
         self.refresh_hidden_list()
+        self.refresh_gyro_row()
 
     # Monta o conteúdo dos cards quadrados da página Sistema: ícone grande (emoji extraído
     # da tradução) em cima, legenda pequena embaixo — igual ao padrão da Biblioteca de apps.
@@ -842,7 +1048,7 @@ class FercDSMenu(Gtk.Window):
         self.btn_yes_lang = Gtk.Button(); self.btn_yes_lang.set_size_request(200, 70); self.btn_yes_lang.set_name("btnLaunch")
         self.btn_no_lang = Gtk.Button(); self.btn_no_lang.set_size_request(200, 70); self.btn_no_lang.set_name("btnCancel")
         
-        self.btn_no_lang.connect("clicked", lambda x: self.lang_stack.set_visible_child_name("list"))
+        self.btn_no_lang.connect("clicked", self.cancel_lang)
         self.btn_yes_lang.connect("clicked", self.confirm_lang)
 
         btn_box.pack_start(self.btn_no_lang, False, False, 0)
@@ -884,8 +1090,11 @@ class FercDSMenu(Gtk.Window):
         self.settings_stack.set_transition_duration(200)
 
         self.settings_stack.add_named(self.build_settings_menu(), "menu")
+        self.settings_stack.add_named(self.build_library_settings_page(), "library")
         self.settings_stack.add_named(self.build_default_cat_page(), "default_cat")
         self.settings_stack.add_named(self.build_hidden_apps_page(), "hidden")
+        self.settings_stack.add_named(self.build_control_page(), "control")
+        self.settings_stack.add_named(self.build_sound_page(), "sound")
 
         self.settings_manager_box.pack_start(top_bar, False, False, 0)
         self.settings_manager_box.pack_start(self.settings_stack, True, True, 10)
@@ -900,19 +1109,37 @@ class FercDSMenu(Gtk.Window):
         scroll.add(body)
         return scroll
 
+    # Linha de menu que abre a subpágina `page` (o texto vem de refresh_settings_buttons).
+    def new_settings_nav_button(self, page):
+        btn = Gtk.Button()
+        btn.set_can_focus(False)
+        btn.set_name("actionBtn")
+        btn.set_size_request(420, 56)
+        btn.connect("clicked", self.show_settings_page, page)
+        return btn
+
     def build_settings_menu(self):
         body = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
         body.set_valign(Gtk.Align.CENTER); body.set_halign(Gtk.Align.CENTER)
 
-        self.btn_go_default_cat = Gtk.Button()
-        self.btn_go_hidden = Gtk.Button()
-        for btn, page in ((self.btn_go_default_cat, "default_cat"),
-                          (self.btn_go_hidden, "hidden")):
-            btn.set_can_focus(False)
-            btn.set_name("actionBtn")
-            btn.set_size_request(420, 56)
-            btn.connect("clicked", self.show_settings_page, page)
-            body.pack_start(btn, False, False, 0)
+        self.btn_go_library = self.new_settings_nav_button("library")
+        self.btn_go_control = self.new_settings_nav_button("control")
+        self.btn_go_sound = self.new_settings_nav_button("sound")
+        body.pack_start(self.btn_go_library, False, False, 0)
+        body.pack_start(self.btn_go_control, False, False, 0)
+        body.pack_start(self.btn_go_sound, False, False, 0)
+
+        return self.wrap_settings_page(body)
+
+    # Tudo que é da Biblioteca: categoria de abertura, apps ocultos e a pasta de apps próprios.
+    def build_library_settings_page(self):
+        body = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+        body.set_valign(Gtk.Align.CENTER); body.set_halign(Gtk.Align.CENTER)
+
+        self.btn_go_default_cat = self.new_settings_nav_button("default_cat")
+        self.btn_go_hidden = self.new_settings_nav_button("hidden")
+        body.pack_start(self.btn_go_default_cat, False, False, 0)
+        body.pack_start(self.btn_go_hidden, False, False, 0)
 
         self.lbl_custom_hint = Gtk.Label()
         self.lbl_custom_hint.set_name("hintLabel")
@@ -997,7 +1224,7 @@ class FercDSMenu(Gtk.Window):
         self.hidden_list_box.show_all()
 
     def on_hidden_app_restored(self, btn, app):
-        self.play_sound("click")
+        self.play_sound("select")
         self.app_categories.pop(app.get("name"), None)
         app["category"] = None
         self.save_app_categories()
@@ -1006,7 +1233,157 @@ class FercDSMenu(Gtk.Window):
         if self.current_selected_app is app:
             self.refresh_app_cat_button()
 
+    # Linha no estilo dos Ajustes do iOS: título e legenda à esquerda, switch à direita.
+    # Devolve a linha e as peças que o chamador preenche (textos e sinal do switch).
+    def new_switch_row(self):
+        row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=18)
+        row.set_name("controlRow")
+        row.set_size_request(480, -1)
+
+        texts = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+        texts.set_valign(Gtk.Align.CENTER)
+
+        title = Gtk.Label()
+        title.set_name("sensorText")
+        title.set_xalign(0.0)
+        texts.pack_start(title, False, False, 0)
+
+        hint = Gtk.Label()
+        hint.set_name("hintLabel")
+        hint.set_xalign(0.0)
+        hint.set_line_wrap(True)
+        hint.set_max_width_chars(38)
+        texts.pack_start(hint, False, False, 0)
+
+        switch = Gtk.Switch()
+        switch.set_name("iosSwitch")
+        switch.set_can_focus(False)
+        switch.set_valign(Gtk.Align.CENTER)
+
+        row.pack_start(texts, True, True, 0)
+        row.pack_start(switch, False, False, 0)
+        return row, title, hint, switch
+
+    # --- CONTROLE: GYRO ---
+    def build_control_page(self):
+        body = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        body.set_halign(Gtk.Align.CENTER)
+
+        row, self.lbl_gyro_title, self.lbl_gyro_hint, self.gyro_switch = self.new_switch_row()
+        # "state-set" em vez de "notify::active": a bolinha desliza na hora do toque,
+        # mas o trilho só acende (o "state" do switch) quando o fercds-gyro
+        # confirma que o sensor mudou de verdade.
+        self.gyro_switch_handler = self.gyro_switch.connect("state-set", self.on_gyro_state_set)
+        body.pack_start(row, False, False, 0)
+
+        return self.wrap_settings_page(body)
+
+    # --- SOM ---
+    # Um switch por categoria de som e, embaixo, o tema de sons que o sistema está usando.
+    def build_sound_page(self):
+        body = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        body.set_halign(Gtk.Align.CENTER)
+
+        self.sound_rows = {}
+        for category in SOUND_CATEGORIES:
+            row, title, hint, switch = self.new_switch_row()
+            switch.set_active(self.sound_enabled[category])
+            switch.connect("notify::active", self.on_sound_switch_toggled, category)
+            body.pack_start(row, False, False, 0)
+            self.sound_rows[category] = (title, hint)
+
+        self.lbl_sound_theme = Gtk.Label()
+        self.lbl_sound_theme.set_name("hintLabel")
+        self.lbl_sound_theme.set_margin_top(6)
+        body.pack_start(self.lbl_sound_theme, False, False, 0)
+
+        return self.wrap_settings_page(body)
+
+    def refresh_sound_page(self):
+        for category, (title, hint) in self.sound_rows.items():
+            title.set_text(self._t("sound_" + category))
+            hint.set_text(self._t("sound_%s_hint" % category))
+        theme_title = sound_theme_info(self.current_sound_theme())[0]
+        self.lbl_sound_theme.set_text("%s %s" % (self._t("sound_theme"), theme_title))
+
+    def on_sound_switch_toggled(self, switch, gparam, category):
+        on = switch.get_active()
+        self.sound_enabled[category] = on
+        self.save_sound_settings()
+        # Ligar uma categoria já toca um som dela, para dar para ouvir o que voltou.
+        if on:
+            self.play_sound("select" if category == "essential" else "toggle_on")
+        else:
+            self.play_sound("toggle_off")
+
+    def read_gyro_state(self):
+        """True/False conforme o gyro esteja ligado; None se o fercds-gyro não
+        estiver instalado (ou não achar o sensor)."""
+        try:
+            out = subprocess.run([GYRO_SCRIPT, "status"], capture_output=True,
+                                 text=True, timeout=2).stdout.strip()
+        except Exception:
+            return None
+        return {"on": True, "off": False}.get(out)
+
+    # Põe switch e legenda de acordo com o último estado lido do script.
+    def refresh_gyro_row(self):
+        state = self.gyro_state
+        # Sincronizar na mão não pode disparar uma nova troca.
+        self.gyro_switch.handler_block(self.gyro_switch_handler)
+        self.gyro_switch.set_active(bool(state))
+        self.gyro_switch.set_state(bool(state))
+        self.gyro_switch.handler_unblock(self.gyro_switch_handler)
+
+        self.gyro_switch.set_sensitive(state is not None and self.gyro_proc is None)
+        ctx = self.gyro_switch.get_style_context()
+        if state is None:
+            ctx.add_class("unavailable")
+        else:
+            ctx.remove_class("unavailable")
+
+        if self.gyro_error:
+            hint = "%s\n%s" % (self._t("gyro_failed"), self.gyro_error)
+        elif state is None:
+            hint = self._t("gyro_missing")
+        else:
+            hint = self._t("gyro_hint")
+        self.lbl_gyro_hint.set_text(hint)
+
+    def on_gyro_state_set(self, switch, want):
+        if self.gyro_proc is None and want != self.gyro_state:
+            self.play_sound("click")
+            self.gyro_error = None
+            try:
+                self.gyro_proc = subprocess.Popen(
+                    ["sudo", "-n", GYRO_SCRIPT, "on" if want else "off"],
+                    stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
+            except Exception as e:
+                self.gyro_error = str(e)
+                self.refresh_gyro_row()
+                return True
+            # Travado até o script terminar, para dois toques não virarem duas trocas.
+            switch.set_sensitive(False)
+            GLib.timeout_add(100, self.poll_gyro_proc)
+        return True  # o "state" só muda em refresh_gyro_row, com o estado real
+
+    def poll_gyro_proc(self):
+        proc = self.gyro_proc
+        if proc.poll() is None:
+            return True
+        err = proc.communicate()[1].strip()
+        if proc.returncode != 0:
+            # Última linha do sudo/script, ex.: "a password is required" = instalador não rodou.
+            self.gyro_error = err.splitlines()[-1] if err else "exit %d" % proc.returncode
+        self.gyro_proc = None
+        self.gyro_state = self.read_gyro_state()
+        self.refresh_gyro_row()
+        return False
+
     def refresh_settings_buttons(self):
+        self.btn_go_library.set_label(self._t("settings_library"))
+        self.btn_go_control.set_label(self._t("settings_control"))
+        self.btn_go_sound.set_label(self._t("settings_sound"))
         self.btn_go_default_cat.set_label(self._t("settings_default_cat"))
         self.btn_go_hidden.set_label("%s (%d)" % (self._t("settings_hidden"),
                                                   len(self.hidden_apps())))
@@ -1022,7 +1399,9 @@ class FercDSMenu(Gtk.Window):
     # das configurações, dentro de uma subpágina ele só sobe um nível.
     def refresh_settings_header(self):
         page = self.settings_stack.get_visible_child_name()
-        titles = {"default_cat": "settings_default_cat", "hidden": "settings_hidden"}
+        titles = {"library": "settings_library", "control": "settings_control",
+                  "sound": "settings_sound", "default_cat": "settings_default_cat",
+                  "hidden": "settings_hidden"}
         self.lbl_title_settings.set_text(self._t(titles.get(page, "settings_title")))
         self.btn_back_settings.set_label(self._t("back_panel" if page == "menu" else "back"))
 
@@ -1030,25 +1409,38 @@ class FercDSMenu(Gtk.Window):
         self.play_sound("click")
         if page_name == "hidden":
             self.refresh_hidden_list()
+        elif page_name == "control":
+            # Lê o estado real toda vez: o gyro pode ter sido trocado fora do painel
+            # e o kernel sempre o liga de novo no boot.
+            if self.gyro_proc is None:
+                self.gyro_error = None
+                self.gyro_state = self.read_gyro_state()
+            self.refresh_gyro_row()
+        elif page_name == "sound":
+            # O tema de sons pode ter sido trocado na DMS com o painel aberto.
+            self.refresh_sound_page()
         self.settings_stack.set_visible_child_name(page_name)
         self.refresh_settings_header()
 
     def show_settings_manager(self, btn):
+        self.play_sound("enter")
         self.settings_stack.set_visible_child_name("menu")
         self.refresh_settings_buttons()
         self.refresh_settings_header()
         self.master_stack.set_visible_child_name("settings_manager")
 
     def hide_settings_manager(self, btn):
-        if self.settings_stack.get_visible_child_name() != "menu":
+        self.play_sound("back")
+        page = self.settings_stack.get_visible_child_name()
+        if page != "menu":
             self.refresh_settings_buttons()
-            self.settings_stack.set_visible_child_name("menu")
+            self.settings_stack.set_visible_child_name(SETTINGS_PARENT.get(page, "menu"))
             self.refresh_settings_header()
             return
         self.master_stack.set_visible_child_name("main_app")
 
     def on_default_category_selected(self, btn, code):
-        self.play_sound("click")
+        self.play_sound("select")
         self.default_category = code
         self.set_default_category(code)
         self.refresh_settings_buttons()
@@ -1058,14 +1450,15 @@ class FercDSMenu(Gtk.Window):
         self.populate_flowbox()
 
     def show_lang_manager(self, btn):
+        self.play_sound("enter")
         self.lang_stack.set_visible_child_name("list")
         self.master_stack.set_visible_child_name("lang_manager")
 
     def hide_lang_manager(self, btn):
+        self.play_sound("back")
         self.master_stack.set_visible_child_name("main_app")
 
     def on_lang_selected(self, btn, lang_code, lang_name):
-        self.play_sound("click")
         if self.current_lang == 'pt' and lang_code == 'pt':
             self.pt_confirm_count += 1
         else:
@@ -1073,25 +1466,32 @@ class FercDSMenu(Gtk.Window):
 
         if self.pt_confirm_count == 5:
             self.lbl_lang_confirm_ask.set_text("Mudar a lingua pra 'Mineirês?' uai?")
-            self.play_sound("complete") 
+            self.play_sound("complete")
             self.pending_lang = 'mineires'
-            self.pt_confirm_count = 0 
+            self.pt_confirm_count = 0
         else:
+            self.play_sound("select")
             self.lbl_lang_confirm_ask.set_text(f"{self._t('change_lang_to')} {lang_name}?")
             self.pending_lang = lang_code
-            
+
         self.lang_stack.set_visible_child_name("confirm")
 
+    def cancel_lang(self, btn):
+        self.play_sound("back")
+        self.lang_stack.set_visible_child_name("list")
+
     def confirm_lang(self, btn):
+        self.play_sound("apply")
         self.current_lang = self.pending_lang
         self.set_saved_lang(self.current_lang)
         self.update_all_texts()
         self.update_telemetry()
-        self.hide_lang_manager(None)
+        self.master_stack.set_visible_child_name("main_app")
 
     # --- GERENCIADOR DE SWITCH (INPUTPLUMBER) ---
     def on_profile_switch_toggled(self, switch, gparam):
         is_game = switch.get_active()
+        self.play_sound("toggle_on" if is_game else "toggle_off")
         state_file = "/tmp/modo_jogo_ativo"
         cmd_desk = "busctl call org.shadowblip.InputPlumber /org/shadowblip/InputPlumber/CompositeDevice0 org.shadowblip.Input.CompositeDevice LoadProfilePath s \"/etc/inputplumber/profiles/fercds_desktop.yaml\""
         cmd_game = "busctl call org.shadowblip.InputPlumber /org/shadowblip/InputPlumber/CompositeDevice0 org.shadowblip.Input.CompositeDevice LoadProfilePath s \"/etc/inputplumber/profiles/fercds_gamepad.yaml\""
@@ -1135,12 +1535,14 @@ class FercDSMenu(Gtk.Window):
         self.proc_manager_box.pack_start(scroll, True, True, 10)
 
     def show_process_manager(self, btn):
+        self.play_sound("enter")
         self.master_stack.set_visible_child_name("proc_manager")
         self.update_process_list()
         if not self.proc_timer_id:
             self.proc_timer_id = GLib.timeout_add(2000, self.update_process_list)
 
     def hide_process_manager(self, btn):
+        self.play_sound("back")
         self.master_stack.set_visible_child_name("main_app")
         if self.proc_timer_id:
             GLib.source_remove(self.proc_timer_id)
@@ -1299,6 +1701,7 @@ class FercDSMenu(Gtk.Window):
     def on_category_filter(self, btn, code):
         if code == self.current_category:
             return
+        self.play_sound("category")
         self.current_category = code
         self.refresh_category_bar()
         self.populate_flowbox()
@@ -1401,7 +1804,7 @@ class FercDSMenu(Gtk.Window):
                 ctx.remove_class("catActive")
 
     def on_app_category_chosen(self, btn, code):
-        self.play_sound("click")
+        self.play_sound("select")
         app = self.current_selected_app
         if app:
             name = app.get("name")
@@ -1461,16 +1864,8 @@ class FercDSMenu(Gtk.Window):
             
         self.flowbox.show_all()
 
-    def play_sound(self, sound_type="click"):
-        path = "/usr/share/sounds/freedesktop/stereo/dialog-information.oga"
-        if sound_type == "cancel":
-            path = "/usr/share/sounds/freedesktop/stereo/dialog-warning.oga"
-        elif sound_type == "complete":
-            path = "/usr/share/sounds/freedesktop/stereo/complete.oga"
-        subprocess.Popen(["paplay", path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-
     def on_app_activated(self, flowbox, child):
-        self.play_sound("click")
+        self.play_sound("select")
         app = child.app_data
         self.current_selected_app = app
         self.set_app_icon(self.confirm_icon, app.get("icon"), 120)
@@ -1490,6 +1885,7 @@ class FercDSMenu(Gtk.Window):
     def confirm_launch(self, widget):
         app = self.current_selected_app
         if app:
+            self.play_sound("launch")
             app["count"] = app.get("count", 0) + 1
             
             count_db = {}
@@ -1585,7 +1981,8 @@ class FercDSMenu(Gtk.Window):
                     scale.add_mark(m, Gtk.PositionType.RIGHT, str(m))
             
             scale.connect("value-changed", cb, lbl, title_key)
-            cb(scale, lbl, title_key) 
+            cb(scale, lbl, title_key)
+            scale.connect("value-changed", lambda s: self.play_sound("slider"))
             
             box.pack_start(lbl, False, False, 0)
             box.pack_start(scale, True, True, 0)
@@ -1783,21 +2180,21 @@ class FercDSMenu(Gtk.Window):
         page_main.pack_start(grid, True, True, 0)
         
         # ATUALIZADO: Usando ';' para encadear a ação no Hyprland 0.56.0
-        self.btn_prev_ws.connect("clicked", lambda x: subprocess.Popen(['bash', '-c', "sleep 0.1 ; hyprctl dispatch 'hl.dispatch(hl.dsp.focus({ monitor = \"eDP-1\" }))' ; hyprctl dispatch 'hl.dispatch(hl.dsp.focus({ workspace = \"m-1\" }))'"]))
-        self.btn_next_ws.connect("clicked", lambda x: subprocess.Popen(['bash', '-c', "sleep 0.1 ; hyprctl dispatch 'hl.dispatch(hl.dsp.focus({ monitor = \"eDP-1\" }))' ; hyprctl dispatch 'hl.dispatch(hl.dsp.focus({ workspace = \"m+1\" }))'"]))
-        self.btn_close.connect("clicked", lambda x: subprocess.Popen(['bash', '-c', "hyprctl dispatch 'hl.dispatch(hl.dsp.window.close())'"]))
+        self.btn_prev_ws.connect("clicked", self.run_system_action, "switch_left", "sleep 0.1 ; hyprctl dispatch 'hl.dispatch(hl.dsp.focus({ monitor = \"eDP-1\" }))' ; hyprctl dispatch 'hl.dispatch(hl.dsp.focus({ workspace = \"m-1\" }))'")
+        self.btn_next_ws.connect("clicked", self.run_system_action, "switch_right", "sleep 0.1 ; hyprctl dispatch 'hl.dispatch(hl.dsp.focus({ monitor = \"eDP-1\" }))' ; hyprctl dispatch 'hl.dispatch(hl.dsp.focus({ workspace = \"m+1\" }))'")
+        self.btn_close.connect("clicked", self.run_system_action, "window_close", "hyprctl dispatch 'hl.dispatch(hl.dsp.window.close())'")
         self.btn_move.connect("clicked", self.toggle_window_monitor_exact)
-        self.btn_fs.connect("clicked", lambda x: subprocess.Popen(['bash', '-c', "hyprctl dispatch 'hl.dispatch(hl.dsp.window.fullscreen())'"]))
-        self.btn_mic.connect("clicked", lambda x: subprocess.Popen(['bash', '-c', 'wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle']))
+        self.btn_fs.connect("clicked", self.toggle_active_fullscreen)
+        self.btn_mic.connect("clicked", self.toggle_mic_mute)
         self.btn_open_win.connect("clicked", self.show_open_windows)
-        self.btn_hide_panel.connect("clicked", lambda x: Gtk.main_quit())
+        self.btn_hide_panel.connect("clicked", self.hide_panel)
 
         # 4.2 SUBPÁGINA: GRADE DE JANELAS ABERTAS
         page_windows = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         
         self.btn_back_grid = Gtk.Button(); self.btn_back_grid.set_name("btnCancel")
         self.btn_back_grid.set_size_request(-1, 50)
-        self.btn_back_grid.connect("clicked", lambda x: self.page4_stack.set_visible_child_name("main"))
+        self.btn_back_grid.connect("clicked", self.close_open_windows)
         
         self.win_scroll = Gtk.ScrolledWindow()
         self.win_scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
@@ -1921,7 +2318,10 @@ class FercDSMenu(Gtk.Window):
         os.system(f"notify-send 'Ayaneo Control' 'Configurações de Hardware Aplicadas'")
 
     # --- LÓGICA DE JANELAS ESPECÍFICAS ---
+    # Sem `btn` é o recarregamento depois de fechar uma janela, que fica em silêncio.
     def show_open_windows(self, btn=None):
+        if btn is not None:
+            self.play_sound("enter")
         for child in self.win_flowbox.get_children():
             self.win_flowbox.remove(child)
             
@@ -1956,7 +2356,12 @@ class FercDSMenu(Gtk.Window):
         self.page4_stack.set_visible_child_name("windows_grid")
         return False
 
+    def close_open_windows(self, btn):
+        self.play_sound("back")
+        self.page4_stack.set_visible_child_name("main")
+
     def on_window_selected(self, flowbox, child):
+        self.play_sound("enter")
         c = child.window_data
         self.active_control_window_address = c.get("address")
         title = c.get("title", c.get("class"))
@@ -1970,28 +2375,32 @@ class FercDSMenu(Gtk.Window):
         self.page4_stack.set_visible_child_name("window_controls")
 
     def close_window_controls(self):
+        self.play_sound("back")
         self.active_control_window_address = None
         self.page4_stack.set_visible_child_name("windows_grid")
 
     def on_cw_close(self, btn):
         if self.active_control_window_address:
+            self.play_sound("window_close")
             subprocess.Popen(f"hyprctl dispatch 'hl.dispatch(hl.dsp.window.close({{ window = \"address:{self.active_control_window_address}\" }}))'", shell=True)
-            GLib.timeout_add(400, self.show_open_windows) 
+            GLib.timeout_add(400, self.show_open_windows)
 
     def on_cw_prev(self, btn):
         if self.active_control_window_address:
+            self.play_sound("switch_left")
             # ATUALIZADO: Usando ';' para encadear a ação no Hyprland 0.56.0
             subprocess.Popen(f"hyprctl dispatch 'hl.dispatch(hl.dsp.focus({{ window = \"address:{self.active_control_window_address}\" }}))' ; hyprctl dispatch 'hl.dispatch(hl.dsp.window.move({{ workspace = \"m-1\" }}))'", shell=True)
 
     def on_cw_next(self, btn):
         if self.active_control_window_address:
+            self.play_sound("switch_right")
             # ATUALIZADO: Usando ';' para encadear a ação no Hyprland 0.56.0
             subprocess.Popen(f"hyprctl dispatch 'hl.dispatch(hl.dsp.focus({{ window = \"address:{self.active_control_window_address}\" }}))' ; hyprctl dispatch 'hl.dispatch(hl.dsp.window.move({{ workspace = \"m+1\" }}))'", shell=True)
-            
+
     def on_cw_fs(self, btn):
         if self.active_control_window_address:
             # ATUALIZADO: Usando ';' para encadear a ação no Hyprland 0.56.0
-            subprocess.Popen(f"hyprctl dispatch 'hl.dispatch(hl.dsp.focus({{ window = \"address:{self.active_control_window_address}\" }}))' ; hyprctl dispatch 'hl.dispatch(hl.dsp.window.fullscreen())'", shell=True)
+            self.toggle_fullscreen(self.active_control_window_address, f"hyprctl dispatch 'hl.dispatch(hl.dsp.focus({{ window = \"address:{self.active_control_window_address}\" }}))' ; hyprctl dispatch 'hl.dispatch(hl.dsp.window.fullscreen())'")
 
     def on_cw_move(self, btn):
         if not self.active_control_window_address: return
@@ -2008,8 +2417,63 @@ class FercDSMenu(Gtk.Window):
             target_mon = "eDP-1" if current_name == "DP-1" else "DP-1"
             # ATUALIZADO: Usando ';' para encadear a ação no Hyprland 0.56.0
             cmd = f"hyprctl dispatch 'hl.dispatch(hl.dsp.focus({{ window = \"address:{self.active_control_window_address}\" }}))' ; hyprctl dispatch 'hl.dispatch(hl.dsp.window.move({{ monitor = \"{target_mon}\" }}))'"
+            self.play_sound("window_monitor")
             subprocess.Popen(cmd, shell=True)
         except Exception as e: pass
+
+    # --- AÇÕES DA PÁGINA SISTEMA ---
+    # Botão que só dispara um comando: toca o som dele e roda.
+    def run_system_action(self, btn, sound, cmd):
+        self.play_sound(sound)
+        subprocess.Popen(['bash', '-c', cmd])
+
+    def toggle_mic_mute(self, btn):
+        # Estava mudo = o toque vai ligar o microfone.
+        muted = "[MUTED]" in subprocess.getoutput("wpctl get-volume @DEFAULT_AUDIO_SOURCE@")
+        self.play_sound("toggle_on" if muted else "toggle_off")
+        subprocess.Popen(['bash', '-c', 'wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle'])
+
+    def hide_panel(self, btn):
+        # O paplay é outro processo: o som termina mesmo com o painel já fechado.
+        self.play_sound("hide_panel")
+        Gtk.main_quit()
+
+    def toggle_active_fullscreen(self, btn):
+        try:
+            address = json.loads(subprocess.getoutput("hyprctl activewindow -j")).get("address")
+        except Exception:
+            address = None
+        self.toggle_fullscreen(address, "hyprctl dispatch 'hl.dispatch(hl.dsp.window.fullscreen())'")
+
+    # O dispatcher de tela cheia só alterna, então o estado da janela é lido antes e
+    # depois dele (por isso o comando roda até o fim aqui) e toca o som de entrar ou
+    # de sair conforme o que aconteceu de fato, seja qual for o modo padrão.
+    def toggle_fullscreen(self, address, cmd):
+        before = self.window_fullscreen_level(address)
+        try:
+            subprocess.run(cmd, shell=True, timeout=2,
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        except Exception:
+            pass
+        after = self.window_fullscreen_level(address)
+        if before is not None and after is not None and after != before:
+            self.play_sound("fullscreen_on" if after > before else "fullscreen_off")
+
+    def window_fullscreen_level(self, address):
+        """0 = normal, 1 = maximizada, 2 = tela cheia; None se a janela não existe.
+        O "fullscreen" do Hyprland 0.56 é um campo de bits (1 maximizada, 2 tela cheia)."""
+        if not address:
+            return None
+        try:
+            out = subprocess.run(["hyprctl", "clients", "-j"], capture_output=True,
+                                 text=True, timeout=2).stdout
+            client = next((c for c in json.loads(out) if c.get("address") == address), None)
+        except Exception:
+            return None
+        if client is None:
+            return None
+        state = int(client.get("fullscreen") or 0)
+        return 2 if state & 2 else state & 1
 
     # --- LÓGICA DE EVENTOS (HARDWARE/MÍDIA) ---
     def on_volume_change(self, scale):
@@ -2035,6 +2499,7 @@ class FercDSMenu(Gtk.Window):
                     current_name = m["name"]
             
             target_mon = "eDP-1" if current_name == "DP-1" else "DP-1"
+            self.play_sound("window_monitor")
             subprocess.Popen(['bash', '-c', f"hyprctl dispatch 'hl.dispatch(hl.dsp.window.move({{ monitor = \"{target_mon}\" }}))'"])
         except Exception as e:
             pass
@@ -2058,7 +2523,7 @@ class FercDSMenu(Gtk.Window):
             elif val > 20: cr.set_source_rgb(0.8, 0.8, 0.2)
             else: cr.set_source_rgb(0.8, 0.2, 0.2)
         else:
-            cr.set_source_rgb(1.0, 1.0, 1.0)
+            Gdk.cairo_set_source_rgba(cr, self.accent_bg_rgba)
             
         start_angle = -math.pi / 2
         end_angle = start_angle + (val / 100.0) * 2 * math.pi
@@ -2080,7 +2545,7 @@ class FercDSMenu(Gtk.Window):
         max_v = max(abs(max(self.bat_w_history)), abs(min(self.bat_w_history)))
         max_v = max_v if max_v > 1 else 1
         
-        cr.set_source_rgb(1.0, 1.0, 1.0)
+        Gdk.cairo_set_source_rgba(cr, self.accent_rgba)
         cr.set_line_width(2)
         
         for i, val in enumerate(self.bat_w_history):
@@ -2205,8 +2670,37 @@ class FercDSMenu(Gtk.Window):
         return True 
 
     # --- ESTILIZAÇÃO CSS GLOBAL ---
+    def theme_color(self, names, fallback):
+        """Primeira das cores `names` que o tema GTK define, ou a reserva. É por aqui
+        que chegam as cores que a DMS gera com o matugen (~/.config/gtk-3.0/gtk.css)."""
+        ctx = self.get_style_context()
+        for name in names:
+            found, rgba = ctx.lookup_color(name)
+            if found:
+                return rgba
+        rgba = Gdk.RGBA()
+        rgba.parse(fallback)
+        return rgba
+
     def apply_css(self):
-        css_str = """
+        # Só os destaques seguem o tema (borda dos fixados, item ativo, botão
+        # pressionado, sliders, switches e gráficos); os fundos continuam os tons
+        # neutros do painel. As reservas são o branco/preto de antes, para temas sem
+        # cor de destaque. "accent" é para bordas e linhas, "accent_bg" para
+        # preenchimentos e "accent_fg" para o texto em cima deles.
+        self.accent_rgba = self.theme_color(
+            ["accent_color", "accent_bg_color", "theme_selected_bg_color"], "#ffffff")
+        self.accent_bg_rgba = self.theme_color(
+            ["accent_bg_color", "accent_color", "theme_selected_bg_color"], "#ffffff")
+        accent_fg_rgba = self.theme_color(
+            ["accent_fg_color", "theme_selected_fg_color"], "#000000")
+        palette = "".join("@define-color %s %s;\n" % (name, rgba.to_string()) for name, rgba in [
+            ("fercds_accent", self.accent_rgba),
+            ("fercds_accent_bg", self.accent_bg_rgba),
+            ("fercds_accent_fg", accent_fg_rgba),
+        ])
+
+        css_str = palette + """
         window {
             background-color: #121212;
             color: #ffffff;
@@ -2221,7 +2715,7 @@ class FercDSMenu(Gtk.Window):
         #sliderText { font-size: 18px; font-weight: bold; }
 
         scale contents { background-color: #2a2a2a; border-radius: 8px; }
-        scale highlight { background-color: #ffffff; border-radius: 8px; }
+        scale highlight { background-color: @fercds_accent_bg; border-radius: 8px; }
         scale slider { background-color: #ffffff; border-radius: 12px; min-width: 25px; min-height: 25px; }
 
         scale#thickSlider.vertical contents { min-width: 32px; }
@@ -2233,7 +2727,7 @@ class FercDSMenu(Gtk.Window):
         }
 
         button:hover { background-color: #333333; }
-        button:active { background-color: #ffffff; color: #000000; }
+        button:active { background-color: @fercds_accent_bg; color: @fercds_accent_fg; }
         button:focus { outline: none; }
 
         #btnTopBar {
@@ -2253,7 +2747,7 @@ class FercDSMenu(Gtk.Window):
             outline: none;
         }
         flowboxchild#appCard:hover { background-color: #2a2a2a; border-color: #555; }
-        flowboxchild#appCard:active { background-color: #444; border-color: #fff; }
+        flowboxchild#appCard:active { background-color: #444; border-color: @fercds_accent; }
 
         #sysBtn {
             background-color: #1a1a1a;
@@ -2262,7 +2756,7 @@ class FercDSMenu(Gtk.Window):
             padding: 8px;
         }
         #sysBtn:hover { background-color: #2a2a2a; border-color: #555; }
-        #sysBtn:active { background-color: #444; border-color: #fff; }
+        #sysBtn:active { background-color: #444; border-color: @fercds_accent; }
         #sysBtnIcon { font-size: 42px; }
         #sysBtnCaption { font-size: 12px; font-weight: bold; }
 
@@ -2286,7 +2780,7 @@ class FercDSMenu(Gtk.Window):
             font-family: 'Public Sans', sans-serif;
         }
         #catBtn:hover { background-color: #2a2a2a; border-color: #555; }
-        #catBtn.catActive { background-color: #ffffff; color: #000000; border-color: #ffffff; }
+        #catBtn.catActive { background-color: @fercds_accent_bg; color: @fercds_accent_fg; border-color: @fercds_accent_bg; }
 
         #catPickBtn {
             background-color: #1a1a1a;
@@ -2305,16 +2799,16 @@ class FercDSMenu(Gtk.Window):
         }
         #catChoiceBtn { background-color: #1a1a1a; border: 1px solid #333333; font-size: 15px; padding: 6px 16px; }
         #catChoiceBtn:hover { background-color: #2a2a2a; border-color: #555; }
-        #catChoiceBtn.catActive { background-color: #ffffff; color: #000000; border-color: #ffffff; }
+        #catChoiceBtn.catActive { background-color: @fercds_accent_bg; color: @fercds_accent_fg; border-color: @fercds_accent_bg; }
 
-        #actionBtn.catActive { background-color: #ffffff; color: #000000; border-color: #ffffff; }
+        #actionBtn.catActive { background-color: @fercds_accent_bg; color: @fercds_accent_fg; border-color: @fercds_accent_bg; }
 
         /* Fixar (canto superior direito da subpágina de lançamento): usa o mesmo
            corpo do seletor de categoria e acende quando o app está fixado. */
-        #catPickBtn.catActive { background-color: #ffffff; color: #000000; border-color: #ffffff; }
+        #catPickBtn.catActive { background-color: @fercds_accent_bg; color: @fercds_accent_fg; border-color: @fercds_accent_bg; }
 
-        /* Card de app fixado: borda clara para destacar quem furou a fila. */
-        flowboxchild#appCard.pinned { border-color: #8a8a8a; }
+        /* Card de app fixado: borda na cor de destaque do tema para marcar quem furou a fila. */
+        flowboxchild#appCard.pinned { border-color: @fercds_accent; }
 
         /* Linha da lista de apps ocultos. */
         #hiddenRowBtn {
@@ -2325,6 +2819,45 @@ class FercDSMenu(Gtk.Window):
             padding: 4px 14px;
         }
         #hiddenRowBtn:hover { background-color: #2a2a2a; border-color: #555; }
+
+        /* Linha da subpágina Controle (mesma paleta das linhas de ocultos). */
+        #controlRow {
+            background-color: #1a1a1a;
+            border: 1px solid #333333;
+            border-radius: 14px;
+            padding: 14px 18px;
+        }
+
+        /* Switch no estilo iOS: trilho em pílula que acende na cor de destaque do
+           tema quando ligado (o do gyro, só quando o sensor mudou de fato), e
+           bolinha branca com sombra. O GTK3 escreve ON/OFF
+           dentro do trilho: cor transparente e fonte de 1px somem com o texto e
+           tiram a largura dele da conta do tamanho do switch. */
+        switch#iosSwitch {
+            background-color: #39393d;
+            background-image: none;
+            border: none;
+            border-radius: 20px;
+            box-shadow: none;
+            padding: 3px;
+            color: transparent;
+            font-size: 1px;
+            text-shadow: none;
+            transition: background-color 200ms ease-out;
+        }
+        switch#iosSwitch:checked { background-color: @fercds_accent_bg; }
+        switch#iosSwitch slider {
+            min-width: 34px;
+            min-height: 34px;
+            margin: 0px;
+            border: none;
+            border-radius: 50%;
+            background-color: #ffffff;
+            background-image: none;
+            box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.35);
+        }
+        /* Sem o fercds-gyro instalado o switch fica apagado (e travado). */
+        switch#iosSwitch.unavailable { opacity: 0.35; }
 
         #emptyCat { font-size: 18px; color: #888888; }
         #hintLabel { font-size: 13px; color: #888888; }

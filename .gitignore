@@ -1,0 +1,15 @@
+# makepkg, se compilar direto em packaging/<pacote> (o install.sh compila em
+# ~/.cache/fercds/build e não deixa nada aqui)
+packaging/*/src/
+packaging/*/pkg/
+packaging/*/wvkbd/
+packaging/*/RyzenAdj/
+packaging/*/*.pkg.tar.*
+packaging/*/*.log
+
+# Python
+__pycache__/
+*.pyc
+
+# Editor
+.vscode/

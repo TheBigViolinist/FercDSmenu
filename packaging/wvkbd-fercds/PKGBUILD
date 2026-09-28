@@ -1,0 +1,33 @@
+# Teclado virtual do FercDS: fork do wvkbd com seleção de monitor
+# (variável WVKBD_OUTPUT, usada pelo toggle_wvkbd.sh).
+# O install.sh compila este pacote com makepkg; para compilar na mão:
+#   cd packaging/wvkbd-fercds && makepkg -si
+
+pkgname=wvkbd-fercds
+pkgver=0.20.r265.g76cc946
+pkgrel=1
+pkgdesc="On-screen keyboard for wlroots (fork to ferc-DS)"
+arch=('x86_64')
+url="https://github.com/TheBigViolinist/wvkbd2fercds"
+license=('GPL-3.0-or-later')
+depends=('wayland' 'libxkbcommon' 'pango' 'cairo')
+makedepends=('git' 'scdoc' 'wayland-protocols')
+provides=('wvkbd')
+conflicts=('wvkbd' 'wvkbd-git' 'wvkbd-niteria')
+source=("wvkbd::git+https://github.com/TheBigViolinist/wvkbd2fercds.git#branch=master")
+sha256sums=('SKIP')
+
+pkgver() {
+  cd wvkbd
+  printf "0.20.r%s.g%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
+}
+
+build() {
+  cd wvkbd
+  make PREFIX=/usr
+}
+
+package() {
+  cd wvkbd
+  make PREFIX=/usr DESTDIR="$pkgdir" install
+}

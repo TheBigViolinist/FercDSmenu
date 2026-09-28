@@ -1,0 +1,47 @@
+#!/bin/bash
+# fercds-backend - sobe os daemons de hardware do FercDS e fica de olho neles.
+#
+# É o ExecStart do fercds-backend.service. Cada daemon lê uma ordem que o menu
+# grava em /tmp e a aplica no hardware:
+#   fercdsfancurve.sh  /tmp/fan_mode   ventoinha (curva térmica ou % fixa)
+#   fercdsgpu.sh       /tmp/gpu_clock  clock máximo da GPU
+#   fercdsgpumode.sh   /tmp/cpu_epp    EPP da CPU (amd-pstate-epp)
+# O fercds-gyro fica de fora de propósito: ele só liga/desliga pelo menu.
+#
+# Se um daemon sair (hardware ainda não pronto no boot, ou sem suporte neste
+# aparelho), ele é religado depois de 5 s; se continuar caindo logo de cara, a
+# espera dobra até 5 min para não encher o journal.
+
+PATH=/usr/bin:/usr/sbin:/bin:/sbin
+export PATH
+
+DIR=/usr/local/lib/fercds/backend
+DAEMONS=(fercdsfancurve.sh fercdsgpu.sh fercdsgpumode.sh)
+
+supervisionar() {
+    local nome=$1 espera=5 inicio codigo
+    while true; do
+        inicio=$SECONDS
+        "$DIR/$nome"
+        codigo=$?
+        # Rodou um bom tempo antes de cair: volta para a espera curta.
+        if (( SECONDS - inicio >= 60 )); then espera=5; fi
+        echo "fercds-backend: $nome saiu (código $codigo); religando em ${espera}s" >&2
+        sleep "$espera"
+        espera=$(( espera * 2 > 300 ? 300 : espera * 2 ))
+    done
+}
+
+# Parando o serviço (ou com Ctrl+C na mão), os daemons vão junto.
+trap 'trap - TERM INT; kill 0' TERM INT
+
+for nome in "${DAEMONS[@]}"; do
+    if [ -x "$DIR/$nome" ]; then
+        echo "fercds-backend: iniciando $nome"
+        supervisionar "$nome" &
+    else
+        echo "fercds-backend: $DIR/$nome não existe, pulando" >&2
+    fi
+done
+
+wait

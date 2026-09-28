@@ -14,6 +14,9 @@ LAST_MODE=""
 while true; do
     # Lê a ordem do painel (se não houver, assume 'auto')
     MODE=$(cat /tmp/gpu_clock 2>/dev/null || echo "auto")
+    # Este loop roda como root e o /tmp aceita escrita de qualquer usuário: só
+    # um clock numérico (MHz) chega às contas e ao sysfs, o resto vale "auto".
+    if [[ ! $MODE =~ ^[0-9]{1,5}$ ]]; then MODE="auto"; else MODE=$((10#$MODE)); fi
 
     if [ "$MODE" != "$LAST_MODE" ]; then
         if [ "$MODE" = "auto" ] || [ "$MODE" -eq 0 ]; then

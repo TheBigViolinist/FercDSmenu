@@ -1,0 +1,12 @@
+[Unit]
+Description=FercDS - daemons de hardware (ventoinha, GPU e EPP da CPU)
+Documentation=https://github.com/TheBigViolinist/FercDSmenu
+
+[Service]
+Type=simple
+ExecStart=/usr/local/lib/fercds/backend/fercds-backend
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
