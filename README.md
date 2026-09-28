@@ -3,6 +3,7 @@
 A menu and a set of tools for using the **AYANEO Flip DS / Flip 1S DS** with **Hyprland**: a panel that stays on the bottom screen, TDP, fan and GPU control, controller profile switching, gyro, an on-screen keyboard and shortcuts built around the device's buttons.
 
 > Work in progress.
+> Somethings were made using llm (warming)
 
 ## What's included
 
